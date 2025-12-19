@@ -1,22 +1,33 @@
-using System.Collections;
-using System.Collections.Generic;
+using System.IO;
+using UnityEditor.Overlays;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MainManager : MonoBehaviour
 {
+    class PlayerData
+    {
+        public string playerName;
+        public int highScore;
+    }
+
     public Brick BrickPrefab;
     public int LineCount = 6;
     public Rigidbody Ball;
 
     public Text ScoreText;
     public GameObject GameOverText;
-    
+
+    public Text highScoreText;
+    int highScore;
+
     private bool m_Started = false;
     private int m_Points;
     
     private bool m_GameOver = false;
+
+    private string playerName;
 
     
     // Start is called before the first frame update
@@ -36,6 +47,9 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+
+        playerName = GameManager.Instance.playerName;
+        LoadHighScoreData();
     }
 
     private void Update()
@@ -72,5 +86,47 @@ public class MainManager : MonoBehaviour
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+        HighScoreText();
+    }
+
+    private void HighScoreText()
+    {
+        if (m_Points > highScore)
+        {
+            highScoreText.text = $"Best Score : {playerName} : {m_Points}";
+            GameManager.Instance.highScore = m_Points;
+
+            SaveHighScoreData();
+        }
+    }
+
+    private void SaveHighScoreData()
+    {
+        PlayerData data = new();
+
+        data.playerName = playerName;
+        data.highScore = GameManager.Instance.highScore;
+
+        string json = JsonUtility.ToJson(data);
+
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+    }
+
+    private void LoadHighScoreData()
+    {
+        string path = Application.persistentDataPath + "/savefile.json";
+
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            PlayerData data = JsonUtility.FromJson<PlayerData>(json);
+
+            highScore = data.highScore;
+            highScoreText.text = $"Best Score : {data.playerName} : {data.highScore}";
+        }
+        else
+        {
+            highScoreText.text = $"Best Score : {playerName} : {m_Points}";
+        }
     }
 }
